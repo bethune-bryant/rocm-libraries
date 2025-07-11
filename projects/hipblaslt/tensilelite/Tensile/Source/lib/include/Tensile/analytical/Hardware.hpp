@@ -30,6 +30,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
 
 #include <hip/hip_runtime.h>
 
