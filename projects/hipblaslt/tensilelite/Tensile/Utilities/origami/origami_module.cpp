@@ -29,6 +29,7 @@ PYBIND11_MODULE(origami, m)
                             double>())
         .def("print", &Hardware::print)
         .def("print_debug_info", &Hardware::print_debug_info)
+        .def("getInstructions", &Hardware::getInstructions)
         .def_readwrite("N_CU", &Hardware::N_CU)
         .def_readwrite("LDS_capacity", &Hardware::LDS_capacity)
         .def_readwrite("mem1_perf_ratio", &Hardware::mem1_perf_ratio)
@@ -45,10 +46,15 @@ PYBIND11_MODULE(origami, m)
           &Hardware::getHardwareForDevice,
           "This gets a hardware object for a device.");
 
+    m.def("getHardwareForUserDefined",
+          &Hardware::getHardwareForUserDefined,
+          "This gets a hardware object for a user defined values.");
+
     m.def("select_best_macro_tile_size",
           &Origami::select_best_macro_tile_size,
           "Get best macro tile sizes.");
     m.def("select_best_grid_size", &Origami::select_best_grid_size, "Select Best Grid Size");
     m.def("compute_total_latency", &Origami::compute_total_latency, "compute_total_latency");
     m.def("select_best_wgm", &Origami::select_best_wgm, "Get best workgroup mapping.");
+    m.def("compute_TFLOPS_from_latency", &Origami::compute_TFLOPS_from_latency, "compute_TFLOPS_from_latency");
 }

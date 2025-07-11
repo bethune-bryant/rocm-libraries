@@ -232,27 +232,13 @@ namespace TensileLite
             static Hardware getHardwareForProperties(hipDeviceProp_t properties)
             {
                 auto archName = get_before_first_colon(properties.gcnArchName);
-                auto archEnum = archNameToEnum(archName);
-                auto it       = ARCH_CONSTANT_MAP.find(archEnum);
-                if(it == ARCH_CONSTANT_MAP.end())
-                {
-                    throw std::runtime_error(
-                        "Attempting to retrieve hardware constants for unsupported architecture: "
-                        + archName); // Could also return default values here.
-                }
-                auto constants = it->second;
-                return Hardware(archEnum,
-                                properties.multiProcessorCount,
-                                properties.sharedMemPerBlock,
-                                constants.num_xcds,
-                                1e9 * constants.mem1_perf_ratio / properties.clockRate,
-                                1e9 * constants.mem2_perf_ratio
-                                    / (properties.memoryClockRate * constants.mem_clock_ratio),
-                                1e9 * constants.mem3_perf_ratio / properties.memoryClockRate,
-                                properties.l2CacheSize,
-                                properties.clockRate / 1e6,
-                                constants.parallel_MI_CU,
-                                constants.percent_bw_per_wg);
+                return getHardwareForUserDefined(archName, 
+                    properties.multiProcessorCount,
+                    properties.sharedMemPerBlock,
+                    properties.clockRate,
+                    properties.memoryClockRate,
+                    properties.l2CacheSize
+                );
             }
 
             static Hardware getHardwareForDevice(int deviceId)
@@ -266,12 +252,57 @@ namespace TensileLite
                 return getHardwareForProperties(prop);
             }
 
+            static Hardware getHardwareForUserDefined(std::string archName,
+                                                    size_t multiProcessorCount,
+                                                    size_t sharedMemPerBlock,
+                                                    double clockRate,
+                                                    double memoryClockRate,
+                                                    size_t l2CacheSize
+                                                )
+            {
+                auto archEnum = archNameToEnum(archName);
+                auto it       = ARCH_CONSTANT_MAP.find(archEnum);
+                if(it == ARCH_CONSTANT_MAP.end())
+                {
+                    throw std::runtime_error(
+                        "Attempting to retrieve hardware constants for unsupported architecture: "
+                        + archName); // Could also return default values here.
+                }
+                auto constants = it->second;
+                return Hardware(archEnum,
+                                multiProcessorCount,
+                                sharedMemPerBlock,
+                                constants.num_xcds,
+                                1e9 * constants.mem1_perf_ratio / clockRate,
+                                1e9 * constants.mem2_perf_ratio
+                                    / (memoryClockRate * constants.mem_clock_ratio),
+                                1e9 * constants.mem3_perf_ratio / memoryClockRate,
+                                l2CacheSize,
+                                clockRate / 1e6,
+                                constants.parallel_MI_CU,
+                                constants.percent_bw_per_wg);
+            }
+
             static bool isHardwareSupported(hipDeviceProp_t properties)
             {
                 auto archName = get_before_first_colon(properties.gcnArchName);
                 auto archEnum = archNameToEnum(archName);
                 auto it       = ARCH_CONSTANT_MAP.find(archEnum);
                 return it != ARCH_CONSTANT_MAP.end();
+            }
+
+            const std::vector<std::tuple<size_t, size_t, size_t, size_t>> getInstructions()
+            {
+                std::vector<std::tuple<size_t, size_t, size_t, size_t>> instructions;
+                for (const auto& pair : INSTRUCTION_MAP.at(arch))
+                {
+                    instructions.push_back(std::make_tuple(pair.first.MI_M,
+                                                           pair.first.MI_N,
+                                                           pair.first.MI_K,
+                                                           pair.first.element_size
+                                                        ));
+                }
+                return instructions;
             }
 
             // Function to print hardware details
