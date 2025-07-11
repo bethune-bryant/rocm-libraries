@@ -32,6 +32,7 @@
 #include <cmath>
 #include <iomanip> // For output formatting
 #include <iostream>
+#include <omp.h>
 
 namespace TensileLite
 {
@@ -213,7 +214,7 @@ namespace TensileLite
             return best_grid;
         }
 
-        std::vector<ResultTuple> select_best_macro_tile_size(size_t                        M,
+        ResultTuple select_best_macro_tile_size(size_t                        M,
                                                              size_t                        N,
                                                              size_t                        K,
                                                              size_t                        batch,
@@ -233,55 +234,58 @@ namespace TensileLite
             std::vector<ResultTuple> valid_results;
             valid_results.reserve(MT_list.size());
 
-            for(const auto& mt : MT_list)
+            #pragma omp parallel
             {
-                size_t MT_M = std::get<0>(mt);
-                size_t MT_N = std::get<1>(mt);
-                size_t MT_K = std::get<2>(mt);
-                size_t MI_M = std::get<3>(mt);
-                size_t MI_N = std::get<4>(mt);
-                size_t MI_K = std::get<5>(mt);
-                size_t occupancy = std::get<6>(mt);
+                std::vector<std::tuple<double, size_t, size_t, size_t, size_t, size_t, size_t, size_t>> local_results;
 
-                if(debug)
+                #pragma omp for nowait schedule(dynamic)
+                for (int i = 0; i < MT_list.size(); ++i)
                 {
-                    std::cout << "Evaluating MT_M=" << MT_M << ", MT_N=" << MT_N
-                              << ", MT_K=" << MT_K << ", MI_M=" << MI_M << ", MI_N=" << MI_N
-                              << ", MI_K=" << MI_K << "\n";
+                    const auto& mt = MT_list[i];
+                    size_t MT_M = std::get<0>(mt);
+                    size_t MT_N = std::get<1>(mt);
+                    size_t MT_K = std::get<2>(mt);
+                    size_t MI_M = std::get<3>(mt);
+                    size_t MI_N = std::get<4>(mt);
+                    size_t MI_K = std::get<5>(mt);
+                    size_t occupancy = std::get<6>(mt);
+
+                    if (debug)
+                    {
+                        #pragma omp critical
+                        std::cout << "Evaluating MT_M=" << MT_M << ", MT_N=" << MT_N
+                                << ", MT_K=" << MT_K << ", MI_M=" << MI_M << ", MI_N=" << MI_N
+                                << ", MI_K=" << MI_K << "\n";
+                    }
+
+                    size_t split = 1;
+                    if (check_LDS_capacity(hardware, MT_M, MT_N, MT_K, element_size_A, debug))
+                    {
+                        double Total_latency = compute_total_latency(hardware,
+                                                                    M, N, K, batch,
+                                                                    transA, transB,
+                                                                    MT_M, MT_N, MT_K,
+                                                                    MI_M, MI_N, MI_K,
+                                                                    split, H_L2,
+                                                                    element_size_A,
+                                                                    element_size_B,
+                                                                    element_size_out,
+                                                                    WGM, mx_block_size,
+                                                                    debug);
+
+                        local_results.emplace_back(Total_latency, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, occupancy);
+                    }
+                    else if (debug)
+                    {
+                        #pragma omp critical
+                        std::cout << "Skipping MT_M=" << MT_M << ", MT_N=" << MT_N << ", MT_K=" << MT_K
+                                << " due to LDS capacity\n";
+                    }
                 }
 
-                size_t split = 1;
-                if(check_LDS_capacity(hardware, MT_M, MT_N, MT_K, element_size_A, debug))
-                {
-                    double Total_latency = compute_total_latency(hardware,
-                                                                 M,
-                                                                 N,
-                                                                 K,
-                                                                 batch,
-                                                                 transA,
-                                                                 transB,
-                                                                 MT_M,
-                                                                 MT_N,
-                                                                 MT_K,
-                                                                 MI_M,
-                                                                 MI_N,
-                                                                 MI_K,
-                                                                 split,
-                                                                 H_L2,
-                                                                 element_size_A,
-                                                                 element_size_B,
-                                                                 element_size_out,
-                                                                 WGM,
-                                                                 mx_block_size,
-                                                                 debug);
-
-                    valid_results.emplace_back(Total_latency, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, occupancy);
-                }
-                else if(debug)
-                {
-                    std::cout << "Skipping MT_M=" << MT_M << ", MT_N=" << MT_N << ", MT_K=" << MT_K
-                              << " due to LDS capacity\n";
-                }
+                // Merge local results into the shared vector
+                #pragma omp critical
+                valid_results.insert(valid_results.end(), local_results.begin(), local_results.end());
             }
 
             if(valid_results.empty())
@@ -335,8 +339,40 @@ namespace TensileLite
                 }
             }
 
-            return valid_results;
+            return valid_results[0];
         }
+
+        // std::vector<ResultTuple> select_best_macro_tile_for_sizes(const std::vector<ProblemTuple>& Problem_list,
+        //                                                             const Hardware&               hardware,
+        //                                                             const size_T MT_start,
+        //                                                             const size_T MT_stop,
+        //                                                             const size_T MT_step,
+        //                                                             double H_L2,
+        //                                                             bool   debug,
+        //                                                             bool   print,
+        //                                                             size_t WGM)
+        // {
+        //     auto instructions = getInstructionsForDataSize(element_size_A);
+
+        //     std::vector<TileTuple> MT_list;
+
+        //     for(size_t MT_M = MT_start; MT_M < MT_stop; MT_M += MT_step)
+        //     {
+        //         for(size_t MT_N = MT_start; MT_N < MT_stop; MT_N += MT_step)
+        //         {
+        //             for(size_t MT_K = MT_start; MT_K < MT_stop; MT_K += MT_step)
+        //             {
+        //                 for(auto instruction& : instructions)
+        //                 {
+
+        //                 }
+        //             }
+        //         }
+        //     }
+
+        // }
+
+        
 
         /*!
          * \brief Selects the best WGM (maximizing L2 hit rate) given fixed macro tile sizes.

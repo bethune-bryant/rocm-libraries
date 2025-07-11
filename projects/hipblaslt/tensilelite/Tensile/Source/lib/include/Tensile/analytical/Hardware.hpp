@@ -306,6 +306,23 @@ namespace TensileLite
                 return instructions;
             }
 
+            const std::vector<std::tuple<size_t, size_t, size_t, size_t>> getInstructionsForDataSize(size_t dataSize)
+            {
+                std::vector<std::tuple<size_t, size_t, size_t, size_t>> instructions;
+                for (const auto& pair : INSTRUCTION_MAP.at(arch))
+                {
+                    if(pair.first.element_size == dataSize)
+                    {
+                        instructions.push_back(std::make_tuple(pair.first.MI_M,
+                                                            pair.first.MI_N,
+                                                            pair.first.MI_K,
+                                                            pair.first.element_size
+                                                            ));
+                    }
+                }
+                return instructions;
+            }
+
             // Function to print hardware details
             void print()
             {

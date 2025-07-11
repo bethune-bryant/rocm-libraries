@@ -59,6 +59,18 @@ namespace TensileLite
                                      size_t  // Occupancy
                                      >;
 
+        using ProblemTuple = std::tuple<size_t, // M
+                                     size_t, // N
+                                     size_t, // K
+                                     size_t, // Batch
+                                     bool, // transA
+                                     bool, // transB
+                                     size_t,  // element_size_A
+                                     size_t,  // element_size_B
+                                     size_t,  // element_size_out
+                                     size_t  // mx_block_size
+                                     >;
+
         size_t select_best_grid_size(size_t          M,
                                      size_t          N,
                                      size_t          K,
@@ -81,7 +93,7 @@ namespace TensileLite
                                      size_t          WGM,
                                      size_t          biggest_allowable_split = 8);
 
-        std::vector<ResultTuple> select_best_macro_tile_size(size_t                        M,
+        ResultTuple select_best_macro_tile_size(size_t                        M,
                                                              size_t                        N,
                                                              size_t                        K,
                                                              size_t                        batch,
