@@ -670,10 +670,10 @@ namespace TensileLite
         }
 
         double compute_TFLOPS_from_latency(
-            double latency_cycles, size_t M, size_t N, size_t K, double clock_GHz, bool debug)
+            double latency_cycles, size_t M, size_t N, size_t K, size_t batch_count, double clock_GHz, bool debug)
         {
             // Compute total FLOPs
-            double total_FLOPs = 2.0 * M * N * K; // For GEMM, each multiply-add is 2 FLOPs
+            double total_FLOPs = 2.0 * M * N * K * batch_count; // For GEMM, each multiply-add is 2 FLOPs
             // Compute total time in seconds
             double cycles_per_second  = clock_GHz * 1e9; // 1 GHz = 1e9 cycles per second
             double total_time_seconds = latency_cycles / cycles_per_second;

@@ -151,6 +151,7 @@ namespace TensileLite
                                            size_t M,
                                            size_t N,
                                            size_t K,
+                                           size_t batch_count,
                                            double clock_GHz,
                                            bool   debug = false);
 
