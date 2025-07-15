@@ -50,8 +50,8 @@ if __name__ == "__main__":
                 os.path.join(ROCM_PATH, "include"),
             ],
             language="c++",
-            extra_compile_args=["-D__HIP_PLATFORM_AMD__", "-fPIC", "-std=c++17", "-O3", "-Wall"],
-            extra_link_args=[f"-L{os.path.join(ROCM_PATH, 'lib')}"],
+            extra_compile_args=["-D__HIP_PLATFORM_AMD__", "-fopenmp", "-fPIC", "-std=c++17", "-O3", "-Wall"],
+            extra_link_args=[f"-L{os.path.join(ROCM_PATH, 'lib')}", "-fopenmp"],
         ),
     ]
 

@@ -68,7 +68,8 @@ namespace TensileLite
                                      size_t,  // element_size_A
                                      size_t,  // element_size_B
                                      size_t,  // element_size_out
-                                     size_t  // mx_block_size
+                                     size_t,  // mx_block_size
+                                     size_t // element_size_compute
                                      >;
 
         size_t select_best_grid_size(size_t          M,
@@ -86,6 +87,7 @@ namespace TensileLite
                                      size_t          MI_K,
                                      size_t          element_size_A,
                                      size_t          element_size_B,
+                                     size_t          element_size_compute,
                                      size_t          element_size_out,
                                      size_t          mx_block_size,
                                      double          H_L2,
@@ -93,7 +95,7 @@ namespace TensileLite
                                      size_t          WGM,
                                      size_t          biggest_allowable_split = 8);
 
-        ResultTuple select_best_macro_tile_size(size_t                        M,
+        std::vector<ResultTuple> select_best_macro_tile_size(size_t                        M,
                                                              size_t                        N,
                                                              size_t                        K,
                                                              size_t                        batch,
@@ -103,12 +105,22 @@ namespace TensileLite
                                                              const std::vector<TileTuple>& MT_list,
                                                              size_t element_size_A,
                                                              size_t element_size_B,
+                                                             size_t element_size_compute,
                                                              size_t element_size_out,
                                                              size_t mx_block_size,
                                                              double H_L2,
                                                              bool   debug,
                                                              bool   print,
                                                              size_t WGM);
+
+
+        std::vector<ResultTuple> select_best_macro_tile_for_sizes(const std::vector<ProblemTuple>& Problem_list,
+                                                                const Hardware& hardware,
+                                                                const std::unordered_map<size_t, std::vector<TileTuple>>& MT_lists,
+                                                                double H_L2,
+                                                                bool debug,
+                                                                bool print,
+                                                                size_t WGM);
 
         std::vector<ResultTuple> sweep_macro_tile_sizes(size_t    M,
                                                         size_t    N,

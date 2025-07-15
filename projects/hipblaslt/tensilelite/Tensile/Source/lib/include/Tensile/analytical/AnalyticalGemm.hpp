@@ -74,6 +74,7 @@ namespace TensileLite
                                           size_t          MI_K,
                                           size_t          element_size_A, //In bits
                                           size_t          element_size_B, //In bits,
+                                          size_t          element_size_compute, //In bits,
                                           bool            debug);
 
         // Computes the number of MT timesteps required to compute all MT. Last wave may be less occupied.
@@ -134,6 +135,7 @@ namespace TensileLite
                                     double          H_L2,
                                     size_t          element_size_A, //In bits
                                     size_t          element_size_B, //In bits,
+                                    size_t          element_size_compute, //In bits
                                     size_t          element_size_out, //In bits
                                     size_t          mx_block_size,
                                     bool            debug);
@@ -177,6 +179,7 @@ namespace TensileLite
                                     double          H_L2,
                                     size_t          element_size_A, //In bits
                                     size_t          element_size_B, //In bits,
+                                    size_t          element_size_compute, //In bits
                                     size_t          element_size_out, //In bits
                                     size_t          mx_block_size,
                                     bool            debug);
@@ -200,6 +203,7 @@ namespace TensileLite
                                      double          H_L2,
                                      size_t          element_size_A, //In bits
                                      size_t          element_size_B, //In bits,
+                                     size_t          element_size_compute, //In bits
                                      size_t          element_size_out, //In bits
                                      int             WGM,
                                      size_t          mx_block_size,
@@ -221,6 +225,7 @@ namespace TensileLite
                                    size_t          MI_K,
                                    size_t          element_size_A,
                                    size_t          element_size_B,
+                                   size_t          element_size_compute,
                                    size_t          element_size_out,
                                    int             WGM,
                                    double          H_mem1,

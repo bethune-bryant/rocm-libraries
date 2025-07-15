@@ -224,6 +224,7 @@ def main():
             args.element_size * 8,
             args.element_size * 8,
             args.element_size * 8,
+            args.element_size * 8,
             0,
             0.8,
             args.debug,

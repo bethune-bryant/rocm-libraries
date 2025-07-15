@@ -159,6 +159,7 @@ namespace TensileLite
                                      size_t          MI_K,
                                      size_t          element_size_A,
                                      size_t          element_size_B,
+                                     size_t          element_size_compute,
                                      size_t          element_size_out,
                                      size_t          mx_block_size,
                                      double          H_L2,
@@ -196,6 +197,7 @@ namespace TensileLite
                                                        H_L2,
                                                        element_size_A, //ElementSizeA
                                                        element_size_B, //ElementSizeB
+                                                       element_size_compute,
                                                        element_size_out, //ElementSizeout
                                                        WGM,
                                                        mx_block_size,
@@ -214,7 +216,7 @@ namespace TensileLite
             return best_grid;
         }
 
-        ResultTuple select_best_macro_tile_size(size_t                        M,
+        std::vector<ResultTuple> select_best_macro_tile_size(size_t                        M,
                                                              size_t                        N,
                                                              size_t                        K,
                                                              size_t                        batch,
@@ -224,6 +226,7 @@ namespace TensileLite
                                                              const std::vector<TileTuple>& MT_list,
                                                              size_t element_size_A, //In bits
                                                              size_t element_size_B, //In bits
+                                                             size_t element_size_compute,
                                                              size_t element_size_out, //In bits
                                                              size_t mx_block_size,
                                                              double H_L2,
@@ -269,6 +272,7 @@ namespace TensileLite
                                                                     split, H_L2,
                                                                     element_size_A,
                                                                     element_size_B,
+                                                                    element_size_compute,
                                                                     element_size_out,
                                                                     WGM, mx_block_size,
                                                                     debug);
@@ -339,38 +343,45 @@ namespace TensileLite
                 }
             }
 
-            return valid_results[0];
+            return valid_results;
         }
 
-        // std::vector<ResultTuple> select_best_macro_tile_for_sizes(const std::vector<ProblemTuple>& Problem_list,
-        //                                                             const Hardware&               hardware,
-        //                                                             const size_T MT_start,
-        //                                                             const size_T MT_stop,
-        //                                                             const size_T MT_step,
-        //                                                             double H_L2,
-        //                                                             bool   debug,
-        //                                                             bool   print,
-        //                                                             size_t WGM)
-        // {
-        //     auto instructions = getInstructionsForDataSize(element_size_A);
+        std::vector<ResultTuple> select_best_macro_tile_for_sizes(const std::vector<ProblemTuple>& Problem_list,
+                                                                const Hardware& hardware,
+                                                                const std::unordered_map<size_t, std::vector<TileTuple>>& MT_lists,
+                                                                double H_L2,
+                                                                bool debug,
+                                                                bool print,
+                                                                size_t WGM)
+        {
+            std::vector<ResultTuple> results(Problem_list.size());
 
-        //     std::vector<TileTuple> MT_list;
+            #pragma omp parallel for
+            for (size_t i = 0; i < Problem_list.size(); ++i)
+            {
+                const ProblemTuple& problem = Problem_list[i];
+                results[i] = select_best_macro_tile_size(std::get<0>(problem),
+                                                        std::get<1>(problem),
+                                                        std::get<2>(problem),
+                                                        std::get<3>(problem),
+                                                        std::get<4>(problem),
+                                                        std::get<5>(problem),
+                                                        hardware,
+                                                        MT_lists.at(std::get<10>(problem)),
+                                                        std::get<6>(problem),
+                                                        std::get<7>(problem),
+                                                        std::get<10>(problem),
+                                                        std::get<8>(problem),
+                                                        std::get<9>(problem),
+                                                        H_L2,
+                                                        debug,
+                                                        print,
+                                                        WGM)[0];
+            }
 
-        //     for(size_t MT_M = MT_start; MT_M < MT_stop; MT_M += MT_step)
-        //     {
-        //         for(size_t MT_N = MT_start; MT_N < MT_stop; MT_N += MT_step)
-        //         {
-        //             for(size_t MT_K = MT_start; MT_K < MT_stop; MT_K += MT_step)
-        //             {
-        //                 for(auto instruction& : instructions)
-        //                 {
+            return results;
+        }
 
-        //                 }
-        //             }
-        //         }
-        //     }
-
-        // }
 
         
 
@@ -559,6 +570,7 @@ namespace TensileLite
                                                 H_L2, //H_mem1
                                                 element_size * 8, //Element Size A
                                                 element_size * 8, //Element Size B
+                                                element_size * 8, //Compute size
                                                 element_size * 8, //Element Size out
                                                 WGM, //WGM
                                                 mx_block_size, //mx_block_size

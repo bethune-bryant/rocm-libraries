@@ -95,6 +95,7 @@ namespace TensileLite
                                           size_t          MI_K,
                                           size_t          element_size_A,
                                           size_t          element_size_B,
+                                          size_t          element_size_compute,
                                           bool            debug)
         {
 
@@ -103,7 +104,7 @@ namespace TensileLite
                 hardware, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, debug);
             // Latency of a single MT_MxMT_NxMT_k tile is the latency of one MI multiplied by number of MI per MT_MxMT_NxMT_k.
             size_t L_MI = hardware.get_MI_latency(
-                MI_M, MI_N, MI_K, std::max(element_size_A, element_size_B));
+                MI_M, MI_N, MI_K, element_size_compute);
 
             // size_t mt_arith = arithmetic_intensity(MT_M, MT_N, MT_K, 2);
             // printf("MT_M:%d MT_N:%d MT_K:%d arith:%d\n", MT_M, MT_N, MT_K, mt_arith);
@@ -449,6 +450,7 @@ namespace TensileLite
                                     double          H_mem1,
                                     size_t          element_size_A,
                                     size_t          element_size_B,
+                                    size_t          element_size_compute,
                                     size_t          element_size_out,
                                     size_t          mx_block_size,
                                     bool            debug)
@@ -468,6 +470,7 @@ namespace TensileLite
                                                           MI_K,
                                                           element_size_A,
                                                           element_size_B,
+                                                          element_size_compute,
                                                           debug);
 
             double L_mem = compute_memory_latency(hardware,
@@ -715,6 +718,7 @@ namespace TensileLite
                                     double          H_mem1,
                                     size_t          element_size_A,
                                     size_t          element_size_B,
+                                    size_t          element_size_compute,
                                     size_t          element_size_out,
                                     size_t          mx_block_size,
                                     bool            debug)
@@ -738,6 +742,7 @@ namespace TensileLite
                                                  H_mem1,
                                                  element_size_A,
                                                  element_size_B,
+                                                 element_size_compute,
                                                  element_size_out,
                                                  mx_block_size,
                                                  debug);
@@ -764,6 +769,7 @@ namespace TensileLite
                                      double          H_mem1,
                                      size_t          element_size_A,
                                      size_t          element_size_B,
+                                     size_t          element_size_compute,
                                      size_t          element_size_out,
                                      int             WGM,
                                      size_t          mx_block_size,
@@ -796,6 +802,7 @@ namespace TensileLite
                                                  H_mem1,
                                                  element_size_A,
                                                  element_size_B,
+                                                 element_size_compute,
                                                  element_size_out,
                                                  mx_block_size,
                                                  debug);
@@ -930,6 +937,7 @@ namespace TensileLite
                                    size_t          MI_K,
                                    size_t          element_size_A,
                                    size_t          element_size_B,
+                                   size_t          element_size_compute,
                                    size_t          element_size_out,
                                    int             WGM,
                                    double          H_mem1,
@@ -958,6 +966,7 @@ namespace TensileLite
                                                           H_mem1,
                                                           element_size_A,
                                                           element_size_B,
+                                                          element_size_compute,
                                                           element_size_out,
                                                           WGM,
                                                           mx_block_size,

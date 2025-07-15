@@ -54,6 +54,10 @@ PYBIND11_MODULE(origami, m)
     m.def("select_best_macro_tile_size",
           &Origami::select_best_macro_tile_size,
           "Get best macro tile sizes.");
+    m.def("select_best_macro_tile_for_sizes",
+          &Origami::select_best_macro_tile_for_sizes,
+          "Get best macro tile sizes.");
+
     m.def("select_best_grid_size", &Origami::select_best_grid_size, "Select Best Grid Size");
     m.def("compute_total_latency", &Origami::compute_total_latency, "compute_total_latency");
     m.def("select_best_wgm", &Origami::select_best_wgm, "Get best workgroup mapping.");
