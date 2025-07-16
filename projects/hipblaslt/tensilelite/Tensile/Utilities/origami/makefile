@@ -8,7 +8,7 @@ STANDALONE_INCLUDES = -I../../Source/lib/include
 
 # Define the compiler flags
 #CXXFLAGS = -O3 -Wall -std=c++17 $(INCLUDES) -L/opt/rocm/lib  -gdwarf-4 -L/home/brnelson/git/hipBLASLt/build/release/hipblaslt-install/lib -lhipblaslt -D__HIP_PLATFORM_AMD__
-STANDALONE_CXXFLAGS = -O3 -Wall -std=c++17 $(STANDALONE_INCLUDES) -gdwarf-4
+STANDALONE_CXXFLAGS = -O3 -Wall -fopenmp -std=c++17 $(STANDALONE_INCLUDES) -gdwarf-4
 
 # Define the target executable
 #TARGET = hipblaslt_client

@@ -32,6 +32,12 @@
 #include <cmath>
 #include <iomanip> // For output formatting
 #include <iostream>
+#include <limits>
+
+
+#include <mutex>
+
+#include <omp.h>
 
 namespace TensileLite
 {
@@ -230,69 +236,73 @@ namespace TensileLite
                                                              bool   print,
                                                              size_t WGM)
         {
+            size_t num_threads = 32;
+            num_threads = std::min(num_threads, static_cast<size_t>(omp_get_max_threads()));
+            num_threads = std::min(num_threads, MT_list.size());
+            omp_set_num_threads(num_threads);
+
             std::vector<ResultTuple> valid_results;
-            valid_results.reserve(MT_list.size());
+            valid_results.resize(MT_list.size());
 
-            for(const auto& mt : MT_list)
+            #pragma omp parallel
             {
-                size_t MT_M = std::get<0>(mt);
-                size_t MT_N = std::get<1>(mt);
-                size_t MT_K = std::get<2>(mt);
-                size_t MI_M = std::get<3>(mt);
-                size_t MI_N = std::get<4>(mt);
-                size_t MI_K = std::get<5>(mt);
-                size_t occupancy = std::get<6>(mt);
+                int tid = omp_get_thread_num();
+                int nthreads = omp_get_num_threads();
+                size_t chunk_size = (MT_list.size() + nthreads - 1) / nthreads;
+                size_t start = tid * chunk_size;
+                size_t end = std::min(start + chunk_size, MT_list.size());
 
-                if(debug)
+                for (size_t i = start; i < end; ++i)
                 {
-                    std::cout << "Evaluating MT_M=" << MT_M << ", MT_N=" << MT_N
-                              << ", MT_K=" << MT_K << ", MI_M=" << MI_M << ", MI_N=" << MI_N
-                              << ", MI_K=" << MI_K << "\n";
-                }
+                    const auto& mt = MT_list[i];
+                    size_t MT_M = std::get<0>(mt);
+                    size_t MT_N = std::get<1>(mt);
+                    size_t MT_K = std::get<2>(mt);
+                    size_t MI_M = std::get<3>(mt);
+                    size_t MI_N = std::get<4>(mt);
+                    size_t MI_K = std::get<5>(mt);
+                    size_t occupancy = std::get<6>(mt);
+                    
+                    double Total_latency = std::numeric_limits<double>::max();
 
-                size_t split = 1;
-                if(check_LDS_capacity(hardware, MT_M, MT_N, MT_K, element_size_A, debug))
-                {
-                    double Total_latency = compute_total_latency(hardware,
-                                                                 M,
-                                                                 N,
-                                                                 K,
-                                                                 batch,
-                                                                 transA,
-                                                                 transB,
-                                                                 MT_M,
-                                                                 MT_N,
-                                                                 MT_K,
-                                                                 MI_M,
-                                                                 MI_N,
-                                                                 MI_K,
-                                                                 split,
-                                                                 H_L2,
-                                                                 element_size_A,
-                                                                 element_size_B,
-                                                                 element_size_out,
-                                                                 WGM,
-                                                                 mx_block_size,
-                                                                 debug);
-
-                    valid_results.emplace_back(Total_latency, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, occupancy);
+                    if (check_LDS_capacity(hardware, MT_M, MT_N, MT_K, element_size_A, false))
+                    {
+                        Total_latency = compute_total_latency(hardware,
+                                                                    M, N, K, batch,
+                                                                    transA, transB,
+                                                                    MT_M, MT_N, MT_K,
+                                                                    MI_M, MI_N, MI_K,
+                                                                    1, H_L2,
+                                                                    element_size_A,
+                                                                    element_size_B,
+                                                                    element_size_out,
+                                                                    WGM,
+                                                                    mx_block_size,
+                                                                    false);
+                    }
+                    valid_results[i] = std::make_tuple(Total_latency, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, occupancy);
                 }
-                else if(debug)
-                {
-                    std::cout << "Skipping MT_M=" << MT_M << ", MT_N=" << MT_N << ", MT_K=" << MT_K
-                              << " due to LDS capacity\n";
-                }
-            }
-
-            if(valid_results.empty())
-            {
-                throw std::runtime_error("No valid macro-tile sizes found.");
             }
 
             // 1) Sort results by ascending latency.
             std::sort(valid_results.begin(), valid_results.end(), [](auto const& a, auto const& b) {
                 return std::get<0>(a) < std::get<0>(b);
             });
+            
+            for(size_t i = 0; i < valid_results.size(); i++)
+            {
+                if(std::get<0>(valid_results[i]) == std::numeric_limits<double>::max())
+                {
+                    valid_results.resize(i);
+                    break;
+                }
+            }
+
+
+            if(valid_results.empty())
+            {
+                throw std::runtime_error("No valid macro-tile sizes found.");
+            }
 
             // 2) Collect results that tie for the absolute best latency.
             double best_latency = std::get<0>(valid_results.front());
@@ -305,22 +315,7 @@ namespace TensileLite
                 else
                     break; // Once we pass best_latency, we can stop.
             }
-            // 3) If that tie group has at least 10 entries, we only use those.
-            // 4) Otherwise, keep adding the next best latencies until we have 10 total or run out.
-            // std::vector<ResultTuple> top_candidates = tie_results;
-            // if(tie_results.size() < 10)
-            // {
-            //     size_t i = tie_results.size();
-            //     while(top_candidates.size() < 10 && i < valid_results.size())
-            //     {
-            //         top_candidates.push_back(valid_results[i]);
-            //         i++;
-            //     }
-            // }
-            // Now ‘top_candidates’ is either all the tied best-latency results (if >=10),
-            // or the top 10 latencies overall (including however many best-latency entries there were).
-
-            // Finally, use your existing tie-breaker on top_candidates
+            
             pick_best_tile_by_arithmetic_intensity(valid_results, num_the_same);
             if(print)
             {
