@@ -33,10 +33,6 @@
 #include <iomanip> // For output formatting
 #include <iostream>
 #include <limits>
-
-
-#include <mutex>
-
 #include <omp.h>
 
 namespace TensileLite

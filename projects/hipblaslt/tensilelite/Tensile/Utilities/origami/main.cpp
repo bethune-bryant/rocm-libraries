@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
     const int                                     request_solutions = 1;
     std::vector<hipblasLtMatmulHeuristicResult_t> heuristicResult;
 
-    
+
     auto initial_start = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < warmups; i++)
     {
