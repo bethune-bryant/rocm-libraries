@@ -239,44 +239,36 @@ namespace TensileLite
             std::vector<ResultTuple> valid_results;
             valid_results.resize(MT_list.size());
 
-            #pragma omp parallel
+            #pragma omp parallel for schedule(static)
+            for (size_t i = 0; i < MT_list.size(); ++i)
             {
-                int tid = omp_get_thread_num();
-                int nthreads = omp_get_num_threads();
-                size_t chunk_size = (MT_list.size() + nthreads - 1) / nthreads;
-                size_t start = tid * chunk_size;
-                size_t end = std::min(start + chunk_size, MT_list.size());
+                const auto& mt = MT_list[i];
+                size_t MT_M = std::get<0>(mt);
+                size_t MT_N = std::get<1>(mt);
+                size_t MT_K = std::get<2>(mt);
+                size_t MI_M = std::get<3>(mt);
+                size_t MI_N = std::get<4>(mt);
+                size_t MI_K = std::get<5>(mt);
+                size_t occupancy = std::get<6>(mt);
 
-                for (size_t i = start; i < end; ++i)
+                double Total_latency = std::numeric_limits<double>::max();
+
+                if (check_LDS_capacity(hardware, MT_M, MT_N, MT_K, element_size_A, false))
                 {
-                    const auto& mt = MT_list[i];
-                    size_t MT_M = std::get<0>(mt);
-                    size_t MT_N = std::get<1>(mt);
-                    size_t MT_K = std::get<2>(mt);
-                    size_t MI_M = std::get<3>(mt);
-                    size_t MI_N = std::get<4>(mt);
-                    size_t MI_K = std::get<5>(mt);
-                    size_t occupancy = std::get<6>(mt);
-                    
-                    double Total_latency = std::numeric_limits<double>::max();
-
-                    if (check_LDS_capacity(hardware, MT_M, MT_N, MT_K, element_size_A, false))
-                    {
-                        Total_latency = compute_total_latency(hardware,
-                                                                    M, N, K, batch,
-                                                                    transA, transB,
-                                                                    MT_M, MT_N, MT_K,
-                                                                    MI_M, MI_N, MI_K,
-                                                                    1, H_L2,
-                                                                    element_size_A,
-                                                                    element_size_B,
-                                                                    element_size_out,
-                                                                    WGM,
-                                                                    mx_block_size,
-                                                                    false);
-                    }
-                    valid_results[i] = std::make_tuple(Total_latency, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, occupancy);
+                    Total_latency = compute_total_latency(hardware,
+                                                                M, N, K, batch,
+                                                                transA, transB,
+                                                                MT_M, MT_N, MT_K,
+                                                                MI_M, MI_N, MI_K,
+                                                                1, H_L2,
+                                                                element_size_A,
+                                                                element_size_B,
+                                                                element_size_out,
+                                                                WGM,
+                                                                mx_block_size,
+                                                                false);
                 }
+                valid_results[i] = std::make_tuple(Total_latency, MT_M, MT_N, MT_K, MI_M, MI_N, MI_K, occupancy);
             }
 
             // 1) Sort results by ascending latency.
