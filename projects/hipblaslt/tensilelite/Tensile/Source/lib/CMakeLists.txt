@@ -24,6 +24,8 @@
 
 cmake_minimum_required(VERSION 3.22...3.25.2)
 
+find_package(OpenMP REQUIRED)
+
 if(NOT DEFINED TENSILE_ROOT)
     get_filename_component(TENSILE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
 endif()
@@ -100,6 +102,9 @@ set_target_properties(TensileHost
                       CXX_STANDARD 17
                       CXX_STANDARD_REQUIRED ON
                       CXX_EXTENSIONS OFF)
+
+
+target_link_libraries(TensileHost PUBLIC OpenMP::OpenMP_CXX)
 
 # Check if folder exists in virtual env, can remove this after virtual env is removed
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../rocisa")

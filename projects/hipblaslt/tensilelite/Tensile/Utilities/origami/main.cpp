@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<hipblasLtHandle_t> hipblasLtHandle  = std::make_shared<hipblasLtHandle_t>();
     hipblasLtCreate(&(*hipblasLtHandle));
 
-    hipblaslt_ext::GemmPreferenceV2 gemmPref;
+    hipblaslt_ext::GemmPreference gemmPref;
     gemmPref.setMaxWorkspaceBytes(134217728);
     
     std::vector<std::shared_ptr<hipblaslt_ext::Gemm>> gemms;
@@ -86,9 +86,9 @@ int main(int argc, char* argv[]) {
         std::shared_ptr<hipblaslt_ext::Gemm> gemm = std::make_shared<hipblaslt_ext::Gemm>(
             *hipblasLtHandle, transA, transB, HIP_R_16F, HIP_R_16F, HIP_R_16F, HIP_R_16F, HIPBLAS_COMPUTE_32F);
 
-        hipblaslt_ext::GemmEpilogueV2
+        hipblaslt_ext::GemmEpilogue
             epilogue; // No action needed, default is HIPBLASLT_EPILOGUE_DEFAULT. (Gemm only)
-        hipblaslt_ext::GemmInputsV2 inputs;
+        hipblaslt_ext::GemmInputs inputs;
         inputs.setA(d_A);
         inputs.setB(d_B);
         inputs.setC(d_C);
