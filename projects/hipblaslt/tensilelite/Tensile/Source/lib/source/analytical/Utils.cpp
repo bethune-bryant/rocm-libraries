@@ -236,9 +236,8 @@ namespace TensileLite
                                                              bool   print,
                                                              size_t WGM)
         {
-            size_t num_threads = 8;
+            size_t num_threads = std::max((size_t)1, MT_list.size() / 25);
             num_threads = std::min(num_threads, static_cast<size_t>(omp_get_max_threads()));
-            num_threads = std::min(num_threads, MT_list.size());
             omp_set_num_threads(num_threads);
 
             std::vector<ResultTuple> valid_results;
@@ -289,19 +288,22 @@ namespace TensileLite
                 return std::get<0>(a) < std::get<0>(b);
             });
             
-            for(size_t i = 0; i < valid_results.size(); i++)
+            size_t valid_count = 0;
+            for(size_t i = valid_results.size() - 1; i >= 0; --i)
             {
-                if(std::get<0>(valid_results[i]) == std::numeric_limits<double>::max())
+                if(std::get<0>(valid_results[i]) != std::numeric_limits<double>::max())
                 {
-                    valid_results.resize(i);
+                    valid_count = i + 1;
                     break;
                 }
             }
-
-
-            if(valid_results.empty())
+            if(valid_count == 0)
             {
                 throw std::runtime_error("No valid macro-tile sizes found.");
+            }
+            else if(valid_count < valid_results.size())
+            {
+                valid_results.resize(valid_count);
             }
 
             // 2) Collect results that tie for the absolute best latency.

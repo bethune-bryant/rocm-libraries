@@ -43,7 +43,7 @@
 #endif
 
 int main(int argc, char* argv[]) {
-    if (argc != 8) {
+    if (argc > 9 || argc < 8) {
         std::cerr << "Usage: " << argv[0] << " <element_size> <m> <n> <k> <transA> <transB>" << std::endl;
         return 1;
     }
@@ -55,10 +55,12 @@ int main(int argc, char* argv[]) {
     hipblasOperation_t transA = std::string(argv[5]) == "true" ? HIPBLAS_OP_T: HIPBLAS_OP_N;
     hipblasOperation_t transB = std::string(argv[6]) == "true" ? HIPBLAS_OP_T: HIPBLAS_OP_N;
     size_t iters = std::stoul(argv[7]);
+    size_t warmups = 2;
+    if(argc > 8) warmups = std::stoul(argv[8]);
     float alpha = 1;
     float beta = 0;
 
-    size_t maxM = m + iters;
+    size_t maxM = m + iters + warmups;
     size_t maxN = n;
     size_t maxK = k;
 
@@ -81,7 +83,7 @@ int main(int argc, char* argv[]) {
     
     std::vector<std::shared_ptr<hipblaslt_ext::Gemm>> gemms;
 
-    for(int i = 0; i < iters; i++)
+    for(int i = 0; i < iters + warmups; i++)
     {
         std::shared_ptr<hipblaslt_ext::Gemm> gemm = std::make_shared<hipblaslt_ext::Gemm>(
             *hipblasLtHandle, transA, transB, HIP_R_16F, HIP_R_16F, HIP_R_16F, HIP_R_16F, HIPBLAS_COMPUTE_32F);
@@ -103,14 +105,18 @@ int main(int argc, char* argv[]) {
     const int                                     request_solutions = 1;
     std::vector<hipblasLtMatmulHeuristicResult_t> heuristicResult;
 
+    
     auto initial_start = std::chrono::high_resolution_clock::now();
-    CHECK_HIPBLASLT_ERROR(gemms[0]->algoGetHeuristic(request_solutions, gemmPref, heuristicResult));
-    CHECK_HIPBLASLT_ERROR(gemms[1]->algoGetHeuristic(request_solutions, gemmPref, heuristicResult));
+    for(int i = 0; i < warmups; i++)
+    {
+        CHECK_HIPBLASLT_ERROR(gemms[i]->algoGetHeuristic(request_solutions, gemmPref, heuristicResult));
+    }
+
     auto initial_end = std::chrono::high_resolution_clock::now();
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    for(int i = 2; i < iters; i++)
+    for(int i = warmups; i < iters + warmups; i++)
     {
         CHECK_HIPBLASLT_ERROR(gemms[i]->algoGetHeuristic(request_solutions, gemmPref, heuristicResult));
     }
@@ -123,8 +129,8 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double, std::micro> duration = end - start;
 
     // Report the runtime
-    std::cout << "First Runtime: " << initial_duration.count() / 2 << " us" << std::endl;
-    std::cout << "Average Runtime over " << iters - 2 << ": " << duration.count() / (iters - 2) << " us" << std::endl;
+    std::cout << "Average Warmup Runtime: " << initial_duration.count() / warmups << " us" << std::endl;
+    std::cout << "Average Runtime over " << iters << ": " << duration.count() / iters << " us" << std::endl;
 
 
     return 0;
