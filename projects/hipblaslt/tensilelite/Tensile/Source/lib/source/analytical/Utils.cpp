@@ -41,8 +41,8 @@ namespace TensileLite
         //
         // Tiebreaker function.
         //
-        void pick_best_tile_by_arithmetic_intensity(std::vector<ResultTuple>& top_results,
-                                                    size_t                    num_to_sort)
+        void pick_best_tile_by_arithmetic_intensity(size_t M, size_t N, size_t K, 
+                std::vector<ResultTuple>& top_results, size_t num_to_sort)
         {
             if(top_results.empty())
             {
@@ -71,16 +71,47 @@ namespace TensileLite
 
                 return flops / memory_traffic;
             };
+
+            auto quantization_remainder = [&](const ResultTuple& t) -> size_t {
+                auto MI_M = std::get<4>(t);
+                auto MI_N = std::get<5>(t);
+                auto MI_K = std::get<6>(t);
+                size_t rM = MI_M ? (M % MI_M) : M;
+                size_t rN = MI_N ? (N % MI_N) : N;
+                size_t rK = MI_K ? (K % MI_K) : K;
+                return rM + rN + rK;
+            };
+
             // 2) Sort the results in descending order of arithmetic intensity
-            //    (highest arithmetic intensity first).
-            std::sort(top_results.begin(),
-                      top_results.begin() + num_to_sort,
-                      [&](const ResultTuple& a, const ResultTuple& b) {
-                          double ai_a = computeArithmeticIntensity(a);
-                          double ai_b = computeArithmeticIntensity(b);
-                          return ai_a > ai_b; // descending
-                      });
-            // 3) Return the tile with the highest arithmetic intensity
+            //    (highest arithmetic intensity first), if two tiles have the 
+            //   same arithmetic intensity, sort by quantization remainder of MI.
+            std::stable_sort(top_results.begin(),
+            top_results.begin() + num_to_sort,
+            [&](const ResultTuple& a, const ResultTuple& b) {
+                double ai_a = computeArithmeticIntensity(a);
+                double ai_b = computeArithmeticIntensity(b);
+                
+                // If arithmetic intensities are different, sort by that.
+                if(ai_a != ai_b)
+                    return ai_a > ai_b;
+            
+                // If arithmetic intensities are the same, sort by quantization remainder.
+                size_t rem_a = quantization_remainder(a);
+                size_t rem_b = quantization_remainder(b);
+                if(rem_a != rem_b)
+                    return rem_a < rem_b;
+
+                // If both arithmetic intensity and quantization remainder are the same,
+                // we can use MT_K as a tiebreaker.
+                if(K > M && K > N)
+                {
+                    auto MI_K_a = std::get<6>(a);
+                    auto MI_K_b = std::get<6>(b);
+                    return MI_K_a > MI_K_b;
+                }
+        });
+
+        // 3) Return the tile with the highest arithmetic intensity
         }
 
         ResultTuple pick_best_tile_with_dimension_priority(
@@ -321,7 +352,7 @@ namespace TensileLite
             // or the top 10 latencies overall (including however many best-latency entries there were).
 
             // Finally, use your existing tie-breaker on top_candidates
-            pick_best_tile_by_arithmetic_intensity(valid_results, num_the_same);
+            pick_best_tile_by_arithmetic_intensity(M, N, K, valid_results, num_the_same);
             if(print)
             {
                 for(const auto& tile : valid_results)
