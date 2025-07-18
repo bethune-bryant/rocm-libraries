@@ -24,19 +24,6 @@
 
 cmake_minimum_required(VERSION 3.22...3.25.2)
 
-option(TENSILE_USE_OPENMP "Build with OpenMP support" ON)
-
-
-if(TENSILE_USE_OPENMP)
-    find_package(OpenMP)
-    if(OpenMP_CXX_FOUND)
-        message(STATUS "OpenMP found: enabling support in Tensile")
-    else()
-        message(WARNING "OpenMP not found: building without OpenMP support")
-    endif()
-endif()
-
-
 if(NOT DEFINED TENSILE_ROOT)
     get_filename_component(TENSILE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
 endif()
@@ -114,10 +101,11 @@ set_target_properties(TensileHost
                       CXX_STANDARD_REQUIRED ON
                       CXX_EXTENSIONS OFF)
 
-
-if(TENSILE_USE_OPENMP AND OpenMP_CXX_FOUND)
-    target_compile_definitions(TensileHost PRIVATE _OPENMP)
-    target_link_libraries(TensileHost PRIVATE OpenMP::OpenMP_CXX)
+if(TENSILE_USE_OPENMP)
+    message(STATUS "OpenMP is enabled and found.")
+    target_link_libraries(TensileHost PRIVATE custom_openmp_cxx)
+else()
+    message(STATUS "OpenMP is not enabled.")
 endif()
 
 # Check if folder exists in virtual env, can remove this after virtual env is removed
