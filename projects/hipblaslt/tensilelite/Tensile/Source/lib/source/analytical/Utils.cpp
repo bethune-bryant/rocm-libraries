@@ -33,7 +33,11 @@
 #include <iomanip> // For output formatting
 #include <iostream>
 #include <limits>
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif
+
 
 namespace TensileLite
 {
@@ -232,9 +236,11 @@ namespace TensileLite
                                                              bool   print,
                                                              size_t WGM)
         {
-            size_t num_threads = std::max(1UL, MT_list.size() / 25);
-            num_threads = std::min(num_threads, static_cast<size_t>(omp_get_max_threads()));
-            omp_set_num_threads(num_threads);
+            #ifdef _OPENMP
+                size_t num_threads = std::max(1UL, MT_list.size() / 25);
+                num_threads = std::min(num_threads, static_cast<size_t>(omp_get_max_threads()));
+                omp_set_num_threads(num_threads);
+            #endif
 
             std::vector<ResultTuple> valid_results;
             valid_results.resize(MT_list.size());
